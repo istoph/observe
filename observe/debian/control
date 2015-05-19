@@ -1,0 +1,11 @@
+Source: observe
+Maintainer: Christoph Hueffelmann <chr@istoph.de>
+Section: video
+Priority: optional
+Standards-Version: 3.8.4
+
+Package: observe
+Depends: dialog, libraspberrypi-bin, libav-tools, graphicsmagick-imagemagick-compat, cron, sudo
+Architecture: all
+Description: observe
+  observe

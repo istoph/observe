@@ -1,0 +1,243 @@
+#!/bin/bash
+## (c) Christoph Hüffelmann 2015
+## E-Mail: chr@istoph.de
+
+DIALOG=${DIALOG=dialog}
+debug=true
+opath='~/observe'
+
+projekt=$1
+if [ "$projekt" != "" ]; then
+
+	if [ -d "$opath/$projekt" ]; then
+		echo "MACHE PIKTURE"
+		#TODO: check free space
+
+		f=$(date +%Y%m%d%H%M%S).jpg
+		raspistill -o $opath/$projekt/raw/$f -e jpg -t 5000
+
+		FORMAT="800x600>"
+        	convert $file -background '#000000' -resize "$FORMAT" -gravity center -extent "$FORMAT" -strip -sampling-factor '4:2:2' -type TrueColor jpeg:$opath/$projekt/smal/$f
+
+		
+
+		#TODO: if video rm
+		rm $opath/$projekt/raw/$f
+
+		
+	else
+		echo "ERROR: Prjekt '$projekt' nicht vorhanden" 1>&2
+		exit 2
+	fi
+
+fi
+
+tempfile=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+trap "rm -f $tempfile" 0 1 2 5 15
+
+while true; do
+
+	$DIALOG --clear --title "Wählen Sie einen Menüpunkt aus" \
+		--menu "Was möchten Sie machen:" 20 50 10 \
+		"1" "Zeit - Datum Einstellen" \
+		"2" "Kammera Justierung" \
+		"3" "Erstellen von Bildern für eine Diareihe	" \
+		"4" "Erstellen von Videos aus einzel Bildern" \
+		"5" "Erstellen von Videos" \
+		"6" "" \
+		"7" "" \
+		"8" "Exit" 2> $tempfile
+
+	retval=$?
+
+	choice=`cat $tempfile`
+
+	case $retval in
+	  0)
+	    echo "'$choice' is your favorite hindi singer";;
+	  1)
+	    echo "Cancel pressed."
+	    exit 1
+	    ;;
+	  255)
+	    echo "ESC pressed."
+	    exit 1
+            ;;
+	esac
+
+	case $choice in
+
+	  1)
+		#TODO: INSTALL DATUM TO START DATUM
+		USERDATE=`$DIALOG --stdout --title "CALENDAR" --calendar "Please choose a date..." 0 0 $(date "+%d %m %Y")`
+
+		case $? in
+		  0)
+		    echo "Date entered: $USERDATE.";;
+		  1)
+		    echo "Cancel pressed.";;
+		  255)
+		    echo "Box closed.";;
+		esac
+
+		USERTIME=`$DIALOG --stdout --title "TIMEBOX" --timebox "Please set the time..." 0 0 $(date "+%H %M %S")`
+
+		case $? in
+		  0)
+		    echo "Time entered: $USERTIME.";;
+		  1)
+		    echo "Cancel pressed.";;
+		  255)
+		    echo "Box closed.";;
+		esac
+
+		clear
+
+		#TODO: set Uhrzeit
+
+		if [ "$debug" == true ]; then
+			echo "$(echo $USERDATE| awk  -F'/' '{print $2"/"$1"/"$3}') $USERTIME"
+			sleep 20
+		else
+			sudo hwclock --set --date "$(echo $USERDATE| awk  -F'/' '{print $2"/"$1"/"$3}') $USERTIME"
+			echo -n $?
+			sudo hwclock --systohc
+			echo -n $?
+			LANG=C date +"%c"
+			sleep 5
+		fi
+
+		;;
+	  2)
+		#echo "TODO"
+		clear
+		raspistill --demo -t 30000		
+		
+		;;
+	  3)
+		#projekt name
+		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+		trap "rm -f $tempfile2" 0 1 2 5 15
+
+		$DIALOG --title "Kammera Justierung" --clear \
+			--inputbox "Bitte geben sie einen Projekt Namen an. Dieser darf keine Leher oder Sonderzeichen enthalten:" 16 51 2> $tempfile
+
+		retval=$?
+
+		#TODO: fehleingaben abfangen
+
+		case $retval in
+		  0)
+		    echo "Input string is `cat $tempfile2`";;
+		  1)
+		    echo "Cancel pressed.";;
+		  255)
+		    if test -s $tempfile2 ; then
+			$projekt=$(cat $tempfile2)
+			mkdir -p $opath/$projekt
+
+		    else
+		      echo "ESC pressed."
+		    fi
+		    ;;
+		esac
+
+		#zeit
+		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+		trap "rm -f $tempfile2" 0 1 2 5 15
+
+		$DIALOG --clear --title "My  favorite HINDI singer" \
+			--menu "Geben Sie an in welchem abstand die Bilder zu einander gemacht werden sollen:" 20 51 4 \
+			"1m" "" \
+			"2m" "" \
+			"5m" "" \
+			"10m" "" \
+			"15m" "" \
+			"20m" "" \
+			"30m" "" \
+			"1h" "" \
+			"2h" "" \
+			"3h" "" \
+			"4h" "" \
+			"5h" "" \
+			"6h" "" \
+			"12h" "" 2> $tempfile2
+
+		retval=$?
+
+		choice=`cat $tempfile2`
+
+		case $retval in
+		  0)
+		    echo "'$choice' is your favorite hindi singer";;
+		  1)
+			break;
+			echo "Cancel pressed."
+			;;
+		  255)
+			break;
+		    	echo "ESC pressed."
+			;;
+		esac
+
+		#bilde crontab
+		case $choice in
+		  "1m") 
+			echo "* * * * * root /usr/bin/observe $projekt"
+			;;
+		  "2m") 
+			echo "*/2 * * * * root /usr/bin/observe $projekt"
+			;;
+		  "5m") 
+			echo "*/5 * * * * root /usr/bin/observe $projekt"
+			;;
+		  "10m") 
+			echo "*/10 * * * * root /usr/bin/observe $projekt"
+			;;
+		  "15m") 
+			echo "*/15 * * * * root /usr/bin/observe $projekt"
+			;;
+		  "1h") 
+			echo "0 * * * * root /usr/bin/observe $projekt"
+			;;
+		  "2h") 
+			echo "0 */2 * * * root /usr/bin/observe $projekt"
+			;;
+		   esac
+
+		$DIALOG --title " My first dialog" --clear \
+			--yesno "Drücken sie YES dann wird mit der Aufnahme begonnen" 10 30
+
+		case $? in
+		  0)
+		    	echo "Yes chosen."
+			#TODO: mv cron
+		   	exit 0
+			;;
+		  1)
+		    	echo "No chosen."
+		    	exit 0
+			;;
+		  255)
+		    echo "ESC pressed.";;
+		esac
+
+
+		;;
+	  4)
+		##TODO: select projekt
+
+		cd $opath/$projekt/smal/
+		for f in $(ls *.jpg); do if [ "$(stat -c%s $f)" -gt "10000" ]; then cat $f; fi; done | avconv -f image2pipe -r 4 -c:v mjpeg -i - -vcodec libx264 -r 20 -f mpegts $projekt.mp4
+
+		;;
+	  8)
+		echo "GOOT BY"
+		exit 0
+		;;
+	  *)
+		echo "funktion noch nicht belegt"
+		;;
+	esac
+
+done
