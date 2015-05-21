@@ -9,8 +9,9 @@ opath='~/observe'
 projekt=$1
 if [ "$projekt" != "" ]; then
 
+	#TODO: check if crontab exit
 	if [ -d "$opath/$projekt" ]; then
-		echo "MACHE PIKTURE"
+		echo "MACHE BILD"
 		#TODO: check free space
 
 		f=$(date +%Y%m%d%H%M%S).jpg
@@ -19,14 +20,12 @@ if [ "$projekt" != "" ]; then
 		FORMAT="800x600>"
         	convert $file -background '#000000' -resize "$FORMAT" -gravity center -extent "$FORMAT" -strip -sampling-factor '4:2:2' -type TrueColor jpeg:$opath/$projekt/smal/$f
 
-		
-
-		#TODO: if video rm
+		#TODO: if video mode rm $f
 		rm $opath/$projekt/raw/$f
 
 		
 	else
-		echo "ERROR: Prjekt '$projekt' nicht vorhanden" 1>&2
+		echo "ERROR: Projekt '$projekt' nicht vorhanden." 1>&2
 		exit 2
 	fi
 
@@ -35,18 +34,41 @@ fi
 tempfile=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
 trap "rm -f $tempfile" 0 1 2 5 15
 
+projekt=$(crontab -l|grep observe|awk '{print $7}')
+if [ "$projekt" != "" ]; then 
+	$DIALOG --title "Projekt '$projekt' läuft" \
+		--backtitle "Projekt '$projekt' läuft" \
+		--yesno "Soll die Aufzeichnung von '$projekt' beendet werden?" 7 60
+
+	retval=$? 
+	case $retval in
+	   0) 
+		echo "Das Projekt '$projekt' wurde beendet."
+		crontab -l|grep -v "observe" > $tempfile
+		crontab $tempfile
+		> $tempfile
+		;;
+	   1) 
+		echo "Das Projekt '$projekt' läuft weiter..."
+		exit 0
+		;;
+	   255) 
+		echo "[ESC] key pressed."
+		exit 1
+		;;
+	esac
+fi
+
 while true; do
 
 	$DIALOG --clear --title "Wählen Sie einen Menüpunkt aus" \
 		--menu "Was möchten Sie machen:" 20 50 10 \
 		"1" "Zeit - Datum Einstellen" \
 		"2" "Kammera Justierung" \
-		"3" "Erstellen von Bildern für eine Diareihe	" \
-		"4" "Erstellen von Videos aus einzel Bildern" \
+		"3" "Erstellen von Bildern für eine Diareihe" \
+		"4" "Erstellen von Videos aus einzelnen Bildern" \
 		"5" "Erstellen von Videos" \
-		"6" "" \
-		"7" "" \
-		"8" "Exit" 2> $tempfile
+		"6" "Exit" 2> $tempfile
 
 	retval=$?
 
@@ -69,7 +91,7 @@ while true; do
 
 	  1)
 		#TODO: INSTALL DATUM TO START DATUM
-		USERDATE=`$DIALOG --stdout --title "CALENDAR" --calendar "Please choose a date..." 0 0 $(date "+%d %m %Y")`
+		USERDATE=`$DIALOG --stdout --title "Kalender" --calendar "Bitte Datum wählen..." 0 0 $(date "+%d %m %Y")`
 
 		case $? in
 		  0)
@@ -80,7 +102,7 @@ while true; do
 		    echo "Box closed.";;
 		esac
 
-		USERTIME=`$DIALOG --stdout --title "TIMEBOX" --timebox "Please set the time..." 0 0 $(date "+%H %M %S")`
+		USERTIME=`$DIALOG --stdout --title "Uhrzeit" --timebox "Bitte Zeit setzen..." 0 0 $(date "+%H %M %S")`
 
 		case $? in
 		  0)
@@ -92,8 +114,6 @@ while true; do
 		esac
 
 		clear
-
-		#TODO: set Uhrzeit
 
 		if [ "$debug" == true ]; then
 			echo "$(echo $USERDATE| awk  -F'/' '{print $2"/"$1"/"$3}') $USERTIME"
@@ -109,36 +129,35 @@ while true; do
 
 		;;
 	  2)
-		#echo "TODO"
 		clear
 		raspistill --demo -t 30000		
-		
 		;;
 	  3)
 		#projekt name
+		TITLE="Erstellen von Bildern"
 		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
 		trap "rm -f $tempfile2" 0 1 2 5 15
 
-		$DIALOG --title "Kammera Justierung" --clear \
-			--inputbox "Bitte geben sie einen Projekt Namen an. Dieser darf keine Leher oder Sonderzeichen enthalten:" 16 51 2> $tempfile
+		$DIALOG --title "$TITLE" --clear \
+			--inputbox "Bitte geben sie einen Projekt Namen an. Dieser darf keine Leer- oder Sonderzeichen enthalten:" 16 51 2> $tempfile2
 
 		retval=$?
 
 		#TODO: fehleingaben abfangen
+		#TODO: prüfen ob projekt schon exisitert
 
 		case $retval in
 		  0)
-		    echo "Input string is `cat $tempfile2`";;
+		    echo "Input string is `cat $tempfile2`"
+		    if test -s $tempfile2 ; then
+                        projekt=$(cat $tempfile2)
+                        mkdir -p $opath/$projekt
+                    fi
+		    ;;
 		  1)
 		    echo "Cancel pressed.";;
 		  255)
-		    if test -s $tempfile2 ; then
-			$projekt=$(cat $tempfile2)
-			mkdir -p $opath/$projekt
-
-		    else
 		      echo "ESC pressed."
-		    fi
 		    ;;
 		esac
 
@@ -146,8 +165,8 @@ while true; do
 		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
 		trap "rm -f $tempfile2" 0 1 2 5 15
 
-		$DIALOG --clear --title "My  favorite HINDI singer" \
-			--menu "Geben Sie an in welchem abstand die Bilder zu einander gemacht werden sollen:" 20 51 4 \
+		$DIALOG --clear --title "$TITLE" \
+			--menu "Geben Sie an in welchem Intervall die Bilder zu einander gemacht werden sollen:" 20 51 4 \
 			"1m" "" \
 			"2m" "" \
 			"5m" "" \
@@ -180,43 +199,48 @@ while true; do
 			;;
 		esac
 
-		#bilde crontab
+		tempfile2=`tempfile 2>/dev/null`
+		trap "rm -f $tempfile2" 0 1 2 5 15
+
+		crontab -l > $tempfile2
+		echo >> $tempfile2
+
 		case $choice in
 		  "1m") 
-			echo "* * * * * root /usr/bin/observe $projekt"
+			echo "* * * * * /usr/bin/observe $projekt"
 			;;
 		  "2m") 
-			echo "*/2 * * * * root /usr/bin/observe $projekt"
+			echo "*/2 * * * * /usr/bin/observe $projekt"
 			;;
 		  "5m") 
-			echo "*/5 * * * * root /usr/bin/observe $projekt"
+			echo "*/5 * * * * /usr/bin/observe $projekt"
 			;;
 		  "10m") 
-			echo "*/10 * * * * root /usr/bin/observe $projekt"
+			echo "*/10 * * * * /usr/bin/observe $projekt"
 			;;
 		  "15m") 
-			echo "*/15 * * * * root /usr/bin/observe $projekt"
+			echo "*/15 * * * * /usr/bin/observe $projekt"
 			;;
 		  "1h") 
-			echo "0 * * * * root /usr/bin/observe $projekt"
+			echo "0 * * * * /usr/bin/observe $projekt"
 			;;
 		  "2h") 
-			echo "0 */2 * * * root /usr/bin/observe $projekt"
+			echo "0 */2 * * * /usr/bin/observe $projekt"
 			;;
-		   esac
+		esac >> $tempfile2
 
-		$DIALOG --title " My first dialog" --clear \
-			--yesno "Drücken sie YES dann wird mit der Aufnahme begonnen" 10 30
+		$DIALOG --title "$TITLE" --clear \
+			--yesno "Drücken Sie YES dann wird das Programm beendent und mit der Aufnahme begonnen" 10 30
 
 		case $? in
 		  0)
 		    	echo "Yes chosen."
-			#TODO: mv cron
+			crontab $tempfile2
 		   	exit 0
 			;;
 		  1)
 		    	echo "No chosen."
-		    	exit 0
+		    	#exit 0
 			;;
 		  255)
 		    echo "ESC pressed.";;
@@ -232,11 +256,11 @@ while true; do
 
 		;;
 	  8)
-		echo "GOOT BY"
+		echo "GOOD-BYE"
 		exit 0
 		;;
 	  *)
-		echo "funktion noch nicht belegt"
+		echo "Funktion noch nicht belegt."
 		;;
 	esac
 

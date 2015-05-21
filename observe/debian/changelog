@@ -1,3 +1,24 @@
+observe (0.1~dev6) precise; urgency=low
+
+  *  User LANG DE
+  *  Rechtschreibprüfung
+
+ -- Christoph Hueffelmann <chr@istoph.de>  Thu, 21 May 2015 22:56:12 +0200
+
+observe (0.1~dev5) precise; urgency=low
+
+  *  Add Cronjob
+  *  Add Exit Projekt
+  *  Bugfix: Projekt Name
+
+ -- Christoph Hueffelmann <chr@istoph.de>  Thu, 21 May 2015 22:25:38 +0200
+
+observe (0.1~dev4) precise; urgency=low
+
+  * Add: Kammara Justirung 
+
+ -- Christoph Hueffelmann <chr@istoph.de>  Tue, 19 May 2015 23:06:29 +0200
+
 observe (0.1~dev3) weehezy; urgency=low
 
   * Add: Set Date/Time
