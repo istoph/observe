@@ -1,5 +1,5 @@
 #!/bin/bash
-## (c) Christoph Hüffelmann 2015
+## (c) Christoph Hueffelmann 2015
 ## E-Mail: chr@istoph.de
 
 DIALOG=${DIALOG=dialog}
@@ -15,14 +15,15 @@ if [ "$projekt" != "" ]; then
 		#TODO: check free space
 
 		f=$(date +%Y%m%d%H%M%S).jpg
-		raspistill -o $opath/$projekt/raw/$f -e jpg -t 5000
+		raw=$opath/$projekt/raw/$f
+		raspistill -o $raw -e jpg -t 5000
 
 		FORMAT="800x600>"
-        	convert $file -background '#000000' -resize "$FORMAT" -gravity center -extent "$FORMAT" -strip -sampling-factor '4:2:2' -type TrueColor jpeg:$opath/$projekt/smal/$f
+        	convert $raw -background '#000000' -resize "$FORMAT" -gravity center -extent "$FORMAT" -strip -sampling-factor '4:2:2' -type TrueColor jpeg:$opath/$projekt/smal/$f
 
-		#TODO: if video mode rm $f
-		rm $opath/$projekt/raw/$f
-		
+		#TODO: if video mode rm $f && convert exit 0
+		#rm $opath/$projekt/raw/$f
+		exit 0
 	else
 		echo "ERROR: Projekt '$projekt' nicht vorhanden." 1>&2
 		exit 2
@@ -67,7 +68,9 @@ while true; do
 		"3" "Erstellen von Bildern für eine Diareihe" \
 		"4" "Erstellen von Videos aus einzelnen Bildern" \
 		"5" "Erstellen von Videos" \
-		"6" "Exit" 2> $tempfile
+		"6" "Zeige Bilder an" \
+		"7" "Zeige Video an" \
+		"8" "Exit" 2> $tempfile
 
 	retval=$?
 
@@ -115,11 +118,11 @@ while true; do
 		clear
 
 		if [ "$debug" == true ]; then
-			echo "$(echo $USERDATE| awk  -F'/' '{print $2"/"$1"/"$3}') $USERTIME"
+			echo "$(echo $USERDATE| awk  -F'/' '{print $2 "/" $1 "/" $3}') $USERTIME"
 			echo "Debug Mode"
 			sleep 20
 		else
-			sudo hwclock --set --date "$(echo $USERDATE| awk  -F'/' '{print $2"/"$1"/"$3}') $USERTIME"
+			sudo hwclock --set --date "$(echo $USERDATE| awk  -F'/' '{print $2 "/" $1 "/" $3}') $USERTIME"
 			echo -n $?
 			sudo hwclock --systohc
 			echo -n $?
@@ -247,13 +250,52 @@ while true; do
 		esac
 		;;
 	  4)
-		##TODO: select projekt
+		if [ $(ls -d $opath/*/smal/|wc -l) -eq 0 ]; then
+			echo "Es ist noch kein Projekt vorhanden."
+			sleep 5
+			break
+		fi
 
-		cd $opath/$projekt/smal/
-		for f in $(ls *.jpg); do if [ "$(stat -c%s $f)" -gt "10000" ]; then cat $f; fi; done | avconv -f image2pipe -r 4 -c:v mjpeg -i - -vcodec libx264 -r 20 -f mpegts $projekt.mp4
+		##TODO: Error Handeling if no 
+		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+		trap "rm -f $tempfile2" 0 1 2 5 15
 
+		dialog --title "Liste der Projekte" --menu "Liste der Projekte" 20 51 4 \
+			$(ls -d $opath/*/smal/ | awk -F"$opath" '{print $2}'| awk -F'/' '{print $2}' | while read l; do echo -n "\"$l\" \"$(ls $opath/$l/smal/|wc -l)\" "; done) 2> $tempfile2
+
+		retval=$?
+		case $retval in
+		  0)
+		    echo "Input string is `cat $tempfile2`"
+		    projekt=$(cat $tempfile2|awk -F'"' '{print $2}')
+		    ;;
+		  1)
+		    echo "Cancel pressed.";;
+		  255)
+		      echo "ESC pressed."
+		    ;;
+		esac
+
+		if [ -d $opath/$projekt/smal/ ]; then
+			pushd $opath/$projekt/smal/
+			if [ -f ../$projekt.mp4 ]; then rm -v ../$projekt.mp4; fi
+			for f in $(ls *.jpg); do if [ "$(stat -c%s $f)" -gt "10000" ]; then cat $f; fi; done | avconv -f image2pipe -r 4 -c:v mjpeg -i - -vcodec libx264 -r 20 -f mpegts ../$projekt.mp4
+			popd
+		fi
+		;;
+	  5)
+		## Video Speichern
+		echo "Haben wir noch nicht:)"
 		;;
 	  6)
+		## select projekt
+		echo "Zeige bilder an"
+		;;
+	  7)
+		## select projekt
+		echo "Zeige video an"
+		;;
+	  8)
 		echo "GOOD-BYE"
 		exit 0
 		;;
