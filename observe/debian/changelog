@@ -1,3 +1,27 @@
+observe (0.1~dev10) precise; urgency=low
+
+  * Bugfix: exit buton nr 6 
+
+ -- Christoph Hueffelmann <chr@istoph.de>  Sun, 31 May 2015 13:41:22 +0200
+
+observe (0.1~dev9) precise; urgency=low
+
+  * Bugfix: mkdir raw and smal 
+
+ -- chr <chr@istoph.de>  Sun, 31 May 2015 13:37:53 +0200
+
+observe (0.1~dev8) precise; urgency=low
+
+  * Bugfix: opath ~ => $HOME
+
+ -- chr <chr@istoph.de>  Sun, 31 May 2015 13:29:00 +0200
+
+observe (0.1~dev7) precise; urgency=low
+
+  * BugTest: mkdir 
+
+ -- chr <chr@istoph.de>  Sun, 31 May 2015 13:07:02 +0200
+
 observe (0.1~dev6) precise; urgency=low
 
   *  User LANG DE

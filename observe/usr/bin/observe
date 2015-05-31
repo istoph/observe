@@ -4,7 +4,7 @@
 
 DIALOG=${DIALOG=dialog}
 debug=true
-opath='~/observe'
+opath="$HOME/observe"
 
 projekt=$1
 if [ "$projekt" != "" ]; then
@@ -22,7 +22,6 @@ if [ "$projekt" != "" ]; then
 
 		#TODO: if video mode rm $f
 		rm $opath/$projekt/raw/$f
-
 		
 	else
 		echo "ERROR: Projekt '$projekt' nicht vorhanden." 1>&2
@@ -117,6 +116,7 @@ while true; do
 
 		if [ "$debug" == true ]; then
 			echo "$(echo $USERDATE| awk  -F'/' '{print $2"/"$1"/"$3}') $USERTIME"
+			echo "Debug Mode"
 			sleep 20
 		else
 			sudo hwclock --set --date "$(echo $USERDATE| awk  -F'/' '{print $2"/"$1"/"$3}') $USERTIME"
@@ -124,7 +124,7 @@ while true; do
 			sudo hwclock --systohc
 			echo -n $?
 			LANG=C date +"%c"
-			sleep 5
+			sleep 3
 		fi
 
 		;;
@@ -151,7 +151,7 @@ while true; do
 		    echo "Input string is `cat $tempfile2`"
 		    if test -s $tempfile2 ; then
                         projekt=$(cat $tempfile2)
-                        mkdir -p $opath/$projekt
+                        mkdir -v -p $opath/$projekt/{raw,smal}
                     fi
 		    ;;
 		  1)
@@ -230,7 +230,7 @@ while true; do
 		esac >> $tempfile2
 
 		$DIALOG --title "$TITLE" --clear \
-			--yesno "Drücken Sie YES dann wird das Programm beendent und mit der Aufnahme begonnen" 10 30
+			--yesno "Drücken Sie Ja dann wird das Programm beendent und mit der Aufnahme begonnen" 10 30
 
 		case $? in
 		  0)
@@ -245,8 +245,6 @@ while true; do
 		  255)
 		    echo "ESC pressed.";;
 		esac
-
-
 		;;
 	  4)
 		##TODO: select projekt
@@ -255,7 +253,7 @@ while true; do
 		for f in $(ls *.jpg); do if [ "$(stat -c%s $f)" -gt "10000" ]; then cat $f; fi; done | avconv -f image2pipe -r 4 -c:v mjpeg -i - -vcodec libx264 -r 20 -f mpegts $projekt.mp4
 
 		;;
-	  8)
+	  6)
 		echo "GOOD-BYE"
 		exit 0
 		;;
