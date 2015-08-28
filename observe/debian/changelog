@@ -1,3 +1,11 @@
+observe (0.1~dev15) precise; urgency=low
+
+  * Bugfix: Messages
+  * Bugfix: crontab timings
+  * Add: Video Menu and Funktion 
+
+ -- chr <chr@chr-laptop>  Fri, 28 Aug 2015 23:18:40 +0200
+
 observe (0.1~dev14) precise; urgency=low
 
   * Bugfix: Projekt menu autogen2 

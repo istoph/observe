@@ -10,10 +10,20 @@ projekt=$1
 if [ "$projekt" != "" ]; then
 
 	#TODO: check if crontab exit
-	if [ -d "$opath/$projekt" ]; then
-		echo "MACHE BILD"
-		#TODO: check free space
+	#TODO: check free space
 
+	##VIDEO
+	if [ -e "$opath/$projekt/.recording" ]; then
+		echo "MACHE EIN VIDEO"
+
+		p=$opath/$projekt/$(date +%Y%m%d%H%M%S).mp4
+		raspivid -o $p -w 800 -h 600 -sh 75 -t `cat $opath/$projekt/.recording`
+
+		exit 0
+	## BILDER
+	elif [ -d "$opath/$projekt" ]; then
+		echo "MACHE BILD"
+		
 		f=$(date +%Y%m%d%H%M%S).jpg
 		raw=$opath/$projekt/raw/$f
 		raspistill -o $raw -e jpg -t 5000
@@ -142,7 +152,7 @@ while true; do
 		trap "rm -f $tempfile2" 0 1 2 5 15
 
 		$DIALOG --title "$TITLE" --clear \
-			--inputbox "Bitte geben sie einen Projekt Namen an. Dieser darf keine Leer- oder Sonderzeichen enthalten:" 16 51 2> $tempfile2
+			--inputbox "Bitte geben Sie einen Projekt Namen an. Dieser darf keine Leer- oder Sonderzeichen enthalten:" 16 51 2> $tempfile2
 
 		retval=$?
 
@@ -169,7 +179,7 @@ while true; do
 		trap "rm -f $tempfile2" 0 1 2 5 15
 
 		$DIALOG --clear --title "$TITLE" \
-			--menu "Geben Sie an in welchem Intervall die Bilder zu einander gemacht werden sollen:" 20 51 4 \
+			--menu "Geben Sie an, in welchem Intervall die Bilder zu einander gemacht werden sollen:" 20 51 4 \
 			"1m" "" \
 			"2m" "" \
 			"5m" "" \
@@ -224,11 +234,32 @@ while true; do
 		  "15m") 
 			echo "*/15 * * * * /usr/bin/observe $projekt"
 			;;
+		  "20m") 
+			echo "*/20 * * * * /usr/bin/observe $projekt"
+			;;
+		  "30m") 
+			echo "*/30 * * * * /usr/bin/observe $projekt"
+			;;
 		  "1h") 
 			echo "0 * * * * /usr/bin/observe $projekt"
 			;;
 		  "2h") 
 			echo "0 */2 * * * /usr/bin/observe $projekt"
+			;;
+		  "3h")
+			echo "0 */3 * * * /usr/bin/observe $projekt"
+			;;
+		  "4h")
+			echo "0 */4 * * * /usr/bin/observe $projekt"
+			;;
+		  "5h")
+			echo "0 */5 * * * /usr/bin/observe $projekt"
+			;;
+		  "6h")
+			echo "0 */6 * * * /usr/bin/observe $projekt"
+			;;
+		  "12h")
+			echo "0 */12 * * * /usr/bin/observe $projekt"
 			;;
 		esac >> $tempfile2
 
@@ -240,11 +271,11 @@ while true; do
 		    	echo "Yes chosen."
 			crontab $tempfile2
 		   	exit 0
-			;;
+		     ;;
 		  1)
 		    	echo "No chosen."
 		    	#exit 0
-			;;
+		     ;;
 		  255)
 		    echo "ESC pressed.";;
 		esac
@@ -278,6 +309,7 @@ while true; do
 
 		if [ -d $opath/$projekt/smal/ ]; then
 			pushd $opath/$projekt/smal/
+			#TODO: ASK
 			if [ -f ../$projekt.mp4 ]; then rm -v ../$projekt.mp4; fi
 			for f in $(ls *.jpg); do if [ "$(stat -c%s $f)" -gt "10000" ]; then cat $f; fi; done | avconv -f image2pipe -r 4 -c:v mjpeg -i - -vcodec libx264 -r 20 -f mpegts ../$projekt.mp4
 			popd
@@ -285,7 +317,163 @@ while true; do
 		;;
 	  5)
 		## Video Speichern
-		echo "Haben wir noch nicht:)"
+
+		## projekt name
+		TITLE="Erstellen von Videos"
+		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+		trap "rm -f $tempfile2" 0 1 2 5 15
+
+		$DIALOG --title "$TITLE" --clear \
+			--inputbox "Bitte geben Sie einen Projekt Namen an. Dieser darf keine Leer- oder Sonderzeichen enthalten:" 16 51 2> $tempfile2
+
+		retval=$?
+
+		#TODO: fehleingaben abfangen
+		#TODO: prüfen ob projekt schon exisitert
+
+		case $retval in
+		  0)
+		    echo "Input string is `cat $tempfile2`"
+		    if test -s $tempfile2 ; then
+                        projekt=$(cat $tempfile2)
+                        mkdir -v -p $opath/$projekt/
+		    else
+			echo "ERROR: Der eingegebene wert war ungültig!"
+			exit 1
+                    fi
+		    ;;
+		  1)
+		      echo "Cancel pressed."
+		      break
+		    ;;
+		  255)
+		      echo "ESC pressed."
+		      break
+		    ;;
+		esac
+
+		##TODO: ggf. größe 800x600 ...
+
+		## aufnahme zeit
+#		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+#		trap "rm -f $tempfile2" 0 1 2 5 15
+
+		$DIALOG --clear --title "$TITLE" \
+			--menu "Geben Sie an, wie lange die einzelnen Videos sein sollen:" 20 51 8 \
+			"1500" "15s" \
+			"3000" "30s" \
+			"6000" "1m" \
+			"12000" "2m" \
+			"30000" "5m" 2>  $opath/$projekt/.recording
+
+		retval=$?
+
+		case $retval in
+		  1)
+		      echo "Cancel pressed."
+		      break
+                    ;;
+		  255)
+		      echo "ESC pressed."
+		      break
+		    ;;
+		esac
+
+		## intervall
+		tempfile2=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+		trap "rm -f $tempfile2" 0 1 2 5 15
+
+		$DIALOG --clear --title "$TITLE" \
+			--menu "Geben Sie an, in welchem Intervall die Videos zu einander gemacht werden sollen:" 20 51 8 \
+			"10m" "" \
+			"15m" "" \
+			"20m" "" \
+			"30m" "" \
+			"1h" "" \
+			"2h" "" \
+			"3h" "" \
+			"4h" "" \
+			"5h" "" \
+			"6h" "" \
+			"12h" "" 2> $tempfile2
+
+		retval=$?
+
+		choice=`cat $tempfile2`
+
+		case $retval in
+		  0)
+		    echo "'$choice' is your favorite hindi singer";;
+		  1)
+			echo "Cancel pressed."
+			break
+			;;
+		  255)
+		    	echo "ESC pressed."
+			break
+			;;
+		esac
+
+		tempfile2=`tempfile 2>/dev/null`
+		trap "rm -f $tempfile2" 0 1 2 5 15
+
+		crontab -l > $tempfile2
+		echo >> $tempfile2
+
+		case $choice in
+		  "10m") 
+			echo "*/10 * * * * /usr/bin/observe $projekt"
+			;;
+		  "15m") 
+			echo "*/15 * * * * /usr/bin/observe $projekt"
+			;;
+		  "20m") 
+			echo "*/20 * * * * /usr/bin/observe $projekt"
+			;;
+		  "30m") 
+			echo "*/30 * * * * /usr/bin/observe $projekt"
+			;;
+		  "1h") 
+			echo "0 * * * * /usr/bin/observe $projekt"
+			;;
+		  "2h") 
+			echo "0 */2 * * * /usr/bin/observe $projekt"
+			;;
+		  "3h")
+			echo "0 */3 * * * /usr/bin/observe $projekt"
+			;;
+		  "4h")
+			echo "0 */4 * * * /usr/bin/observe $projekt"
+			;;
+		  "5h")
+			echo "0 */5 * * * /usr/bin/observe $projekt"
+			;;
+		  "6h")
+			echo "0 */6 * * * /usr/bin/observe $projekt"
+			;;
+		  "12h")
+			echo "0 */12 * * * /usr/bin/observe $projekt"
+			;;
+		esac >> $tempfile2
+
+		## exit
+		$DIALOG --title "$TITLE" --clear \
+			--yesno "Drücken Sie Ja dann wird das Programm beendent und mit der Aufnahme begonnen" 10 30
+
+		case $? in
+		  0)
+		    	echo "Yes chosen."
+			crontab $tempfile2
+		   	exit 0
+			;;
+		  1)
+		    	echo "No chosen."
+		    	#exit 0
+			;;
+		  255)
+		    echo "ESC pressed.";;
+		esac
+
 		;;
 	  6)
 		## select projekt
