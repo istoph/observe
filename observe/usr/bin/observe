@@ -360,11 +360,11 @@ while true; do
 
 		$DIALOG --clear --title "$TITLE" \
 			--menu "Geben Sie an, wie lange die einzelnen Videos sein sollen:" 20 51 8 \
-			"1500" "15s" \
-			"3000" "30s" \
-			"6000" "1m" \
-			"12000" "2m" \
-			"30000" "5m" 2>  $opath/$projekt/.recording
+			"15000" "15s" \
+			"30000" "30s" \
+			"60000" "1m" \
+			"120000" "2m" \
+			"300000" "5m" 2>  $opath/$projekt/.recording
 
 		retval=$?
 
